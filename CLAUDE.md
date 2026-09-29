@@ -18,7 +18,8 @@ Later goal: show the YouTube chat replay alongside.
 - ✅ Phase 2: WXT extension. Builds for Chrome and Firefox MV3. The user tested it in Chrome: correct time and channel, but every URL jump reloads Discord (expected).
 - ✅ Phase 4: the Vencord plugin (`vencord-plugin/`) plus the extension's "Discord desktop" target. It builds, lints and typechecks inside `..\Vencord`, and the local server was tested in Node.
 - ✅ The user tested Phase 4 in Discord desktop: in-app jumps with no reload.
-- ▶️ **Next:** pick from Phase 3 (Firefox check, soft jump, calibrate) and Phase 5 (put the target at the bottom of the chat, icons, etc.).
+- ✅ Firefox: the user tested it in Firefox 156 (temporary add-on) with the Discord desktop target. Min version 140; web-ext lint is clean.
+- ▶️ **Next:** pick from Phase 3 (soft jump, calibrate) and Phase 5 (put the target at the bottom of the chat, icons, etc.).
 
 ## Key constraints (do not violate)
 

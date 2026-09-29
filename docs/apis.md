@@ -71,6 +71,6 @@ Useful fields:
 
 ## Browser extension platform
 - **Chrome:** MV3 with a service worker. The worker can be killed at any time, so register listeners at the top level and keep state in `storage.session`.
-- **Firefox:** MV3 with `background.scripts` (WXT does this). Needs `browser_specific_settings.gecko.id`. `world: "MAIN"` content scripts need Firefox 128+. New AMO add-ons need `data_collection_permissions`.
+- **Firefox:** MV3 with `background.scripts` (WXT does this). Needs `browser_specific_settings.gecko.id`. `world: "MAIN"` content scripts need Firefox 128+. New AMO add-ons need `data_collection_permissions`, which needs Firefox 140+ (Android 142+), so our minimum is 140. Users can switch off site access, so the popup checks `permissions.contains` and offers "Allow access".
 - **WXT:** builds Firefox as **MV2 unless** `manifestVersion: 3` is set.
 - **Localhost bridge:** the background may `fetch("http://127.0.0.1:PORT")` if `http://127.0.0.1/*` is in `host_permissions`, which exempts it from Chrome's Local Network Access prompt. Never make this call from a content script.

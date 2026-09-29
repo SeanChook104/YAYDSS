@@ -6,6 +6,8 @@ import type { BackgroundMessage, JumpResult, Settings, Status, TestResult } from
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = {
     state: $("state"),
+    access: $("access"),
+    grant: $<HTMLButtonElement>("grant"),
     title: $("title"),
     author: $("author"),
     start: $("start"),
@@ -196,7 +198,22 @@ el.stop.addEventListener("click", async () => {
     await refresh();
 });
 
+/**
+ * Firefox lets users switch off an add-on's site access (and older versions
+ * didn't grant it at install). Without it the content scripts never run.
+ */
+const SITE_ACCESS = { origins: ["https://www.youtube.com/*", "https://*.discord.com/*", "http://127.0.0.1/*"] };
+
+el.grant.addEventListener("click", () => {
+    // Must be called straight from the click. Firefox may close the popup while asking.
+    void browser.permissions.request(SITE_ACCESS).then(granted => {
+        el.access.hidden = granted;
+        if (granted) say("Access allowed. Reload the YouTube tab.");
+    });
+});
+
 async function start() {
+    el.access.hidden = await browser.permissions.contains(SITE_ACCESS);
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     tabId = tab?.id ?? null;
     await refresh();

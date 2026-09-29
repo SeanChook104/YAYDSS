@@ -16,7 +16,7 @@ Tick items off as they land.
   - hosts: `https://www.youtube.com/*`, `https://*.discord.com/*`
   - permissions: `storage`
   - a `sync-now` command
-  - Firefox only: `gecko` id, `strict_min_version: "128.0"`, `data_collection_permissions`
+  - Firefox only: `gecko` id, `strict_min_version: "140.0"`, `data_collection_permissions`
 - [x] `youtube-main.content.ts` (MAIN world): `getPlayerResponse()` + `yt-navigate-finish`, then `postMessage` the broadcast facts.
 - [x] `youtube.content.ts`: `<video>` events + heartbeat (now 2 s), skip ads, JSON-LD fallback, send to the background.
 - [x] `background.ts`: top-level listeners, `storage.session` tab links, `chooseStart → realMs → snowflakeFromMs → decideJump`, URL driver (`tabs.update`).
@@ -31,7 +31,8 @@ Tick items off as they land.
 - [ ] Replace the placeholder WXT icons
 
 ## Phase 3 – Firefox + polish
-- [ ] `pnpm dev:firefox`, then load via `about:debugging` and check that `world: "MAIN"` made it into the manifest.
+- [x] Firefox build: `world: "MAIN"` and `background.scripts` are in the manifest; `web-ext lint` gives 0 errors and 0 warnings (min version raised to 140 for `data_collection_permissions`); the popup offers "Allow access" if site access is off.
+- [x] **Manual test in Firefox 156** (temporary add-on): works with the Discord desktop target
 - [ ] Soft jump, experimental and off by default. Test it in the console first.
 - [ ] Calibrate from a pasted message link.
 - [ ] Badge, GitHub Actions (tests + both builds), `wxt zip`.

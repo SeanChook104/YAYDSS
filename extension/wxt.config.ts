@@ -25,11 +25,12 @@ export default defineConfig({
             browser_specific_settings: {
                 gecko: {
                     id: "yaydss@seanchook104",
-                    // world: "MAIN" content scripts need Firefox 128+.
-                    strict_min_version: "128.0",
+                    // MAIN-world content scripts need 128+; data_collection_permissions needs 140+ (current ESR).
+                    strict_min_version: "140.0",
                     // Required for new add-ons on addons.mozilla.org since Nov 2025.
                     data_collection_permissions: { required: ["none"] }
-                }
+                },
+                gecko_android: { strict_min_version: "142.0" }
             }
         })
     })

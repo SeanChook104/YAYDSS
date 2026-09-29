@@ -50,7 +50,7 @@ Did Discord move to that moment without reloading?
 4. Pin it: puzzle icon → pin **YAYDSS**.
 5. After a rebuild, click the ↻ on the YAYDSS card, then **reload the YouTube tab**.
 
-**Firefox (128+)**
+**Firefox (140+)**
 1. Build it: `pnpm -F @yaydss/extension build:firefox`.
 2. Open `about:debugging#/runtime/this-firefox` and click **Load Temporary Add-on…**.
 3. Pick `extension/.output/firefox-mv3/manifest.json`. It stays loaded until Firefox closes.
@@ -60,7 +60,7 @@ Did Discord move to that moment without reloading?
 - Content scripts: the YouTube tab's DevTools console.
 
 ## Extension checklist (Phase 2/3)
-Run each item in Chrome, then again in Firefox 128+.
+Run each item in Chrome, then again in Firefox 140+.
 - [ ] Normal livestream VOD: Discord shows the right moment.
 - [ ] Premiere: start is taken from `end − duration`.
 - [ ] Normal (non-live) video: nothing happens and the popup says so.

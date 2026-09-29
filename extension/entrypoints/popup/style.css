@@ -65,6 +65,7 @@ h1 { margin: 0; font-size: 15px; letter-spacing: 0.02em; }
 
 .notes { margin: 4px 0 0; padding-left: 16px; color: var(--warn); }
 .problem { margin: 0 0 8px; padding: 6px 8px; border-radius: 6px; background: var(--field); color: var(--warn); }
+.access { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 
 fieldset { margin: 0; padding: 0; border: 0; display: grid; gap: 6px; }
 fieldset:disabled { opacity: 0.5; }
