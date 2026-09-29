@@ -19,7 +19,9 @@ Later goal: show the YouTube chat replay alongside.
 - ✅ Phase 4: the Vencord plugin (`vencord-plugin/`) plus the extension's "Discord desktop" target. It builds, lints and typechecks inside `..\Vencord`, and the local server was tested in Node.
 - ✅ The user tested Phase 4 in Discord desktop: in-app jumps with no reload.
 - ✅ Firefox: the user tested it in Firefox 156 (temporary add-on) with the Discord desktop target. Min version 140; web-ext lint is clean.
-- ▶️ **Next:** pick from Phase 3 (soft jump, calibrate) and Phase 5 (put the target at the bottom of the chat, icons, etc.).
+- ✅ The plugin puts the VOD moment at the **bottom** of the chat (Position setting, smooth scroll). The user tested it in Discord desktop (`docs/decisions.md` #14).
+- ✅ README has install + usage steps for the extension (Chrome/Firefox) and the plugin.
+- ▶️ **Next:** pick from Phase 3 (soft jump, calibrate) and Phase 5 (icons, AMO signing, chat replay).
 
 ## Key constraints (do not violate)
 

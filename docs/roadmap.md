@@ -61,7 +61,7 @@ Tick items off as they land.
 - [ ] Later: a web-Discord `postMessage` bridge.
 
 ## Phase 5 – Later / optional
-- Line up the target message with the bottom of the chat. URL jumps put it mid-screen, which shows about a minute of "future" chat in busy streams.
+- [x] Line up the target message with the bottom of the chat (Vencord plugin, Position = Bottom, smooth scroll). URL jumps still put it mid-screen. Tested by the user in Discord desktop.
 - Live mode.
 - YouTube chat replay (ToS risk).
 - Chrome Web Store / AMO listings.

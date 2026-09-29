@@ -25,6 +25,19 @@ const settings = definePluginSettings({
         description: "Follow the VOD: jump when the YAYDSS extension sends a time",
         default: true
     },
+    position: {
+        type: OptionType.SELECT,
+        description: "Where the VOD's moment sits in the chat",
+        options: [
+            { label: "Bottom: the newest message you see is from the VOD's moment (no spoilers)", value: "bottom", default: true },
+            { label: "Middle: Discord's normal jump (also shows some later chat)", value: "middle" }
+        ]
+    },
+    smooth: {
+        type: OptionType.BOOLEAN,
+        description: "Scroll smoothly while following",
+        default: true
+    },
     flash: {
         type: OptionType.BOOLEAN,
         description: "Highlight the message it jumps to",
@@ -46,8 +59,10 @@ const settings = definePluginSettings({
 
 /** Bumped on every (re)start/stop so old long-poll loops end. */
 let generation = 0;
-/** Last real message we jumped to, so we don't re-jump to the same one every tick. */
-let lastJumpedId: string | null = null;
+/** Last message we moved to. Ticks for the same moment leave your scrolling alone. */
+let lastTargetId: string | null = null;
+/** Retries lining up the target after Discord jumps/loads. */
+let alignTimer: ReturnType<typeof setInterval> | undefined;
 
 function newToken() {
     return crypto.randomUUID().replaceAll("-", "");
@@ -92,32 +107,105 @@ function handleTick(tick: Tick) {
     if (!settings.store.follow) return;
 
     const manual = tick.reason === "manual";
-    const path = buildMessagePath(tick.guildId, tick.channelId, tick.messageId);
+    // Like opening a message link: Discord loads the messages around that moment.
+    const openLink = () => {
+        lastTargetId = null;
+        jumpThenAlign(tick, () => NavigationRouter.transitionTo(buildMessagePath(tick.guildId, tick.channelId, tick.messageId)));
+    };
 
     if (SelectedChannelStore.getChannelId() !== tick.channelId) {
         // Only "Sync now" may pull you into the channel; automatic ticks leave you alone elsewhere.
-        if (manual) {
-            lastJumpedId = null;
-            NavigationRouter.transitionTo(path);
-        }
+        if (manual) openLink();
         return;
     }
 
-    const loaded = lastLoadedMessageAtOrBefore(tick.channelId, tick.realMs);
-    if (loaded) {
-        if (loaded === lastJumpedId && !manual) return;
-        lastJumpedId = loaded;
+    const target = lastLoadedMessageAtOrBefore(tick.channelId, tick.realMs);
+    if (!target) return openLink();
+    if (target === lastTargetId && !manual) return;
+    lastTargetId = target;
+
+    if (settings.store.position === "bottom" && alignToBottom(tick.channelId, target, settings.store.smooth)) {
+        if (settings.store.flash) flash(tick.channelId, target);
+        return;
+    }
+
+    // Middle position, or the message isn't on screen yet: let Discord jump to it.
+    jumpThenAlign(tick, () =>
         MessageActions.jumpToMessage({
             channelId: tick.channelId,
-            messageId: loaded,
+            messageId: target,
             flash: settings.store.flash,
             jumpType: "INSTANT"
-        });
-    } else {
-        // Not loaded yet: same as opening a message link, Discord fetches messages around that moment.
-        lastJumpedId = null;
-        NavigationRouter.transitionTo(path);
+        })
+    );
+}
+
+/** Let Discord jump (it centres the message), then for "bottom" line it up once it's on screen. */
+function jumpThenAlign(tick: Tick, jump: () => void) {
+    clearInterval(alignTimer);
+    jump();
+    if (settings.store.position !== "bottom") return;
+
+    const giveUpAt = Date.now() + 5000;
+    let aligned = 0;
+    alignTimer = setInterval(() => {
+        if (Date.now() > giveUpAt || !settings.store.follow) return clearInterval(alignTimer);
+        if (SelectedChannelStore.getChannelId() !== tick.channelId) return;
+
+        const target = lastLoadedMessageAtOrBefore(tick.channelId, tick.realMs);
+        if (!target || !alignToBottom(tick.channelId, target, false)) return;
+        lastTargetId = target;
+        // Discord may scroll once more after loading, so line up twice.
+        if (++aligned >= 2) clearInterval(alignTimer);
+    }, 250);
+}
+
+/**
+ * Scroll the chat so the message's bottom edge sits at the bottom of the view.
+ * Returns false if the message isn't rendered.
+ * Uses the message's element id (the same one Vencord's messageLogger uses),
+ * not Discord's class names, which change often.
+ */
+function alignToBottom(channelId: string, messageId: string, smooth: boolean): boolean {
+    const el = document.getElementById(`chat-messages-${channelId}-${messageId}`);
+    const scroller = el && scrollParent(el);
+    if (!el || !scroller) return false;
+
+    const wantBottom = scroller.getBoundingClientRect().bottom - bottomGap(scroller);
+    const delta = el.getBoundingClientRect().bottom - wantBottom;
+    if (Math.abs(delta) > 1) scroller.scrollBy({ top: delta, behavior: smooth ? "smooth" : "auto" });
+    return true;
+}
+
+/** The nearest parent that scrolls vertically (the chat's scroller). */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+    for (let n = el.parentElement; n; n = n.parentElement) {
+        const { overflowY } = getComputedStyle(n);
+        if ((overflowY === "auto" || overflowY === "scroll") && n.scrollHeight > n.clientHeight) return n;
     }
+    return null;
+}
+
+/**
+ * Space to leave under the message: up to the top of Discord's floating
+ * "You're viewing older messages" bar, so the bar doesn't cover it.
+ * Flush, so no sliver of the next (later) message peeks out.
+ */
+function bottomGap(scroller: HTMLElement): number {
+    const bar = document.querySelector<HTMLElement>('[class*="jumpToPresentBar"]');
+    if (!bar) return 0;
+    const s = scroller.getBoundingClientRect();
+    const b = bar.getBoundingClientRect();
+    return b.height > 0 && b.top < s.bottom && b.bottom > s.top ? s.bottom - b.top : 0;
+}
+
+function flash(channelId: string, messageId: string) {
+    const el = document.getElementById(`chat-messages-${channelId}-${messageId}`);
+    if (!el) return;
+    el.classList.remove("vc-yaydss-flash");
+    void el.offsetWidth; // restart the animation
+    el.classList.add("vc-yaydss-flash");
+    setTimeout(() => el.classList.remove("vc-yaydss-flash"), 1600);
 }
 
 /**
@@ -163,7 +251,7 @@ const FollowButton: ChatBarButtonFactory = ({ isMainChat }) => {
             tooltip={follow ? "YAYDSS: following the VOD (click to stop)" : "YAYDSS: not following (click to follow)"}
             onClick={() => {
                 settings.store.follow = !follow;
-                lastJumpedId = null;
+                lastTargetId = null; // re-line-up on the next tick
             }}
         >
             <SyncIcon className={follow ? undefined : "vc-yaydss-off"} />
@@ -188,6 +276,7 @@ export default definePlugin({
         "Copy YAYDSS pairing token": () => void copyWithToast(settings.store.token, "Pairing token copied"),
         "Toggle YAYDSS follow": () => {
             settings.store.follow = !settings.store.follow;
+            lastTargetId = null;
             showToast(`YAYDSS: ${settings.store.follow ? "following" : "not following"}`);
         }
     },
@@ -204,7 +293,8 @@ export default definePlugin({
 
     stop() {
         generation++;
-        lastJumpedId = null;
+        clearInterval(alignTimer);
+        lastTargetId = null;
         if (!IS_WEB) void Native?.stopServer();
     }
 });

@@ -33,6 +33,13 @@ Newest at the bottom. Format: date – decision – why.
     - For normal streams, `end − start` and the VOD length differ by only about 1 s. That confirms `startTimestamp` as VOD 0:00, with plenty of room under the 60 s threshold.
     - During a pre-roll ad, `#movie_player` has `.ad-showing` and `<video>.duration` is the ad's length (6 s). So ads must be skipped.
 
+14. **2026-09-29 – Plugin puts the VOD moment at the bottom of the chat** (setting: Position = Bottom, the default).
+    - It scrolls Discord's chat itself, so the newest message visible is the last one sent at or before the VOD moment: no spoilers.
+    - It finds the message by its element id `chat-messages-<channel>-<message>` (also used by Vencord's messageLogger), not by class names, which broke the prior art twice.
+    - The scroller is the nearest parent that scrolls; it lines up flush with the top of the "viewing older messages" bar (found by `[class*="jumpToPresentBar"]`, or 0 if missing).
+    - If the message isn't rendered yet, Discord jumps first and the plugin lines it up once it's there (retrying for up to 5 s).
+    - A tick for the same moment doesn't touch your scrolling.
+
 ## Test results to record
 - [x] **Phase 0 jump test:** where Discord lands for a computed (non-existent) message ID. See decision 12.
 - [ ] **Soft jump:** does `pushState` + `popstate` work with Discord's router?

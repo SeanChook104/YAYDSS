@@ -1,3 +1,19 @@
+/* Chat-bar button when not following */
 .vc-yaydss-off {
     opacity: 0.45;
+}
+
+/* "Highlight the message it jumps to" when YAYDSS scrolls by itself */
+.vc-yaydss-flash {
+    animation: vc-yaydss-flash 1.5s ease-out;
+}
+
+@keyframes vc-yaydss-flash {
+    from {
+        background-color: rgb(88 101 242 / 30%);
+    }
+
+    to {
+        background-color: transparent;
+    }
 }
