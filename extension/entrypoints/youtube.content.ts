@@ -9,7 +9,7 @@ import {
     type VideoReport
 } from "@/utils/types";
 
-const HEARTBEAT_MS = 5000;
+const HEARTBEAT_MS = 2000;
 /** Dragging the seek bar fires several "seeked" events; only send the last one. */
 const SEEK_DEBOUNCE_MS = 800;
 

@@ -72,7 +72,11 @@ Run each item in Chrome, then again in Firefox 128+.
 - [ ] ptb / canary Discord tabs.
 - [ ] Calibrate fixes a start time that is wrong on purpose.
 
+## Vencord plugin: automated check of the local server
+Bundle `native.ts` with Vencord's esbuild and run it in Node. Then send it requests: correct token → 200/204; missing or wrong token → 401; `Origin: https://evil.com` → 403; bad JSON or not a tick → 400; oversized body → connection closed; a port already in use → clear error; after `stopServer` → connection refused. All passed on 2026-09-29.
+
 ## Vencord plugin checklist (Phase 4)
+Install steps: `vencord-plugin/README.md`.
 - [ ] Pair (port + token) → **Test** says OK.
 - [ ] Ticks move Discord desktop without a reload.
 - [ ] Wrong token → 401.

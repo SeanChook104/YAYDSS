@@ -16,7 +16,9 @@ Later goal: show the YouTube chat replay alongside.
 - ✅ Phase 0 manual jump test: computed IDs work; the target lands mid-screen with no highlight (`docs/decisions.md` #12).
 - ✅ Phase 1: `packages/core`. Pure TS with vitest; all tests pass.
 - ✅ Phase 2: WXT extension. Builds for Chrome and Firefox MV3. The user tested it in Chrome: correct time and channel, but every URL jump reloads Discord (expected).
-- ▶️ **Next:** the main target is the Discord **desktop** app, so the Vencord plugin (Phase 4) matters most. Phase 3 (Firefox check, soft jump, calibrate) is browser polish.
+- ✅ Phase 4: the Vencord plugin (`vencord-plugin/`) plus the extension's "Discord desktop" target. It builds, lints and typechecks inside `..\Vencord`, and the local server was tested in Node.
+- ✅ The user tested Phase 4 in Discord desktop: in-app jumps with no reload.
+- ▶️ **Next:** pick from Phase 3 (Firefox check, soft jump, calibrate) and Phase 5 (put the target at the bottom of the chat, icons, etc.).
 
 ## Key constraints (do not violate)
 
@@ -46,7 +48,7 @@ url = https://discord.com/channels/<guild_id>/<channel_id>/<message_id>
 ```
 packages/core/    shared maths: snowflake, time, discordUrl, youtubeStart (chooseStart), policy (decideJump), protocol (Tick)
 extension/        WXT project: entrypoints/{background, youtube-main.content (MAIN world), youtube.content, popup/}, utils/{types, storage}
-vencord-plugin/   userplugin (Phase 4): not created yet; copied into Vencord by scripts/sync-vencord.mjs (a symlink breaks Vencord's tsconfig aliases)
+vencord-plugin/   userplugin: src/{index.tsx, native.ts, style.css}. Copied (with core → core/) into ..\Vencord\src\userplugins\yaydss by `pnpm vencord:sync`. A symlink breaks Vencord's tsconfig aliases.
 scripts/          jump-url.mjs (manual test helper)
 docs/             apis, architecture, decisions, prior-art, roadmap, testing
 ```
@@ -57,6 +59,7 @@ docs/             apis, architecture, decisions, prior-art, roadmap, testing
 - `pnpm test`: vitest in all packages.
 - `pnpm typecheck`
 - `node scripts/jump-url.mjs "2026-09-01T20:00" "<channel link>"`: prints a jump link.
+- `pnpm vencord:sync` / `pnpm vencord:watch`: copy the plugin into `../Vencord`; then `pnpm build` (or `pnpm build --watch`) there.
 
 ## Build plan (summary; details in `docs/roadmap.md`)
 

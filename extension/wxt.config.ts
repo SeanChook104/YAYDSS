@@ -13,7 +13,8 @@ export default defineConfig({
         action: { default_title: "YAYDSS" },
         permissions: ["storage"],
         // *.discord.com also matches discord.com.
-        host_permissions: ["https://www.youtube.com/*", "https://*.discord.com/*"],
+        // 127.0.0.1 = the YAYDSS Vencord plugin inside Discord desktop (only this computer).
+        host_permissions: ["https://www.youtube.com/*", "https://*.discord.com/*", "http://127.0.0.1/*"],
         commands: {
             "sync-now": {
                 suggested_key: { default: "Alt+Shift+S" },

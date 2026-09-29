@@ -13,7 +13,8 @@ export type JumpReason = "manual" | "seek" | "play" | "interval";
 export const MIN_INTERVAL_MS: Record<JumpMode, number> = {
     url: 60_000,
     soft: 10_000,
-    vencord: 5_000
+    // The plugin jumps in-app and skips repeats, so follow closely (heartbeat is 2 s).
+    vencord: 1_500
 };
 
 /** A seek (or play) only jumps if the target moved at least this far. */

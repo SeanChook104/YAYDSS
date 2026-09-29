@@ -41,9 +41,27 @@
 
       <label class="check">
         <input id="auto" type="checkbox" />
-        Auto-follow: on play/seek and every 60 s
+        <span id="auto-label">Auto-follow</span>
       </label>
     </fieldset>
+
+    <section class="connection">
+      <label for="send-to">Send to</label>
+      <select id="send-to">
+        <option value="tab">Discord in a browser tab (reloads the tab)</option>
+        <option value="vencord">Discord desktop app (YAYDSS Vencord plugin)</option>
+      </select>
+      <div id="vencord-box" class="vencord" hidden>
+        <div class="row">
+          <input id="v-port" type="number" min="1024" max="65535" title="Port (same as in the plugin settings)" />
+          <input id="v-token" type="password" placeholder="Pairing token from Discord" autocomplete="off" />
+        </div>
+        <div class="row">
+          <button id="v-test" type="button" class="secondary">Test connection</button>
+          <span id="v-result" class="muted ellipsis"></span>
+        </div>
+      </div>
+    </section>
 
     <div class="row actions">
       <button id="sync" type="button" class="primary">Sync now</button>

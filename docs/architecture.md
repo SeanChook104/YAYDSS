@@ -15,7 +15,7 @@ Tell Discord to show `message_id` in the chosen channel. Discord loads the messa
 │   ├─ youtube-main.content.ts  (MAIN world)                          │
 │   │    getPlayerResponse() → broadcast facts ──postMessage──┐       │
 │   └─ youtube.content.ts       (isolated)                    ▼       │
-│        <video> play/pause/seeked + 5 s heartbeat ── runtime.sendMessage
+│        <video> play/pause/seeked + 2 s heartbeat ── runtime.sendMessage
 │                                                             │       │
 │  background.ts (service worker / event page)  ◄─────────────┘       │
 │   chooseStart → realMs → snowflakeFromMs → decideJump → driver:     │
@@ -54,7 +54,7 @@ Tell Discord to show `message_id` in the chosen channel. Discord loads the messa
 - **Manual** ("Sync now" or the shortcut): always.
 - **Paused, or auto off:** never automatically.
 - **Seek / play:** only if the target moved more than 15 s.
-- **Interval:** at least 60 s apart (url), 10 s (soft) or 5 s (vencord). URL jumps reload Discord, so keep them rare.
+- **Interval:** at least 60 s apart (url), 10 s (soft) or 1.5 s (vencord; the plugin skips repeats). URL jumps reload Discord, so keep them rare.
 
 ## Privacy / safety rules
 - The extension never reads Discord messages.

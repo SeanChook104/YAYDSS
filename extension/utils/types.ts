@@ -37,9 +37,20 @@ export interface VideoMemory {
 }
 
 export interface Settings {
-    /** Jump automatically (on play/seek and every 60 s). Off = only "Sync now". */
+    /** Jump automatically (on play/seek and on an interval). Off = only "Sync now". */
     auto: boolean;
+    /** "tab" = change a Discord browser tab's URL; "vencord" = send to the plugin in Discord desktop. */
+    target: "tab" | "vencord";
+    vencordPort: number;
+    vencordToken: string;
 }
+
+export const DEFAULT_SETTINGS: Settings = {
+    auto: true,
+    target: "tab",
+    vencordPort: 47810,
+    vencordToken: ""
+};
 
 /** A YouTube tab that is syncing. Lives in session storage. */
 export interface TabLink {
@@ -69,7 +80,10 @@ export type BackgroundMessage =
     | { type: "yt-report"; reason: ReportReason; report: VideoReport }
     | { type: "get-status"; tabId: number }
     | { type: "sync-now"; tabId: number }
-    | { type: "stop"; tabId: number };
+    | { type: "stop"; tabId: number }
+    | { type: "test-vencord" };
+
+export type TestResult = { ok: true } | { ok: false; error: string };
 
 /** Messages to the YouTube content script. */
 export type ContentMessage = { type: "get-report" };

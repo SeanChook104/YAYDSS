@@ -18,7 +18,7 @@ Tick items off as they land.
   - a `sync-now` command
   - Firefox only: `gecko` id, `strict_min_version: "128.0"`, `data_collection_permissions`
 - [x] `youtube-main.content.ts` (MAIN world): `getPlayerResponse()` + `yt-navigate-finish`, then `postMessage` the broadcast facts.
-- [x] `youtube.content.ts`: `<video>` events + 5 s heartbeat, skip ads, JSON-LD fallback, send to the background.
+- [x] `youtube.content.ts`: `<video>` events + heartbeat (now 2 s), skip ads, JSON-LD fallback, send to the background.
 - [x] `background.ts`: top-level listeners, `storage.session` tab links, `chooseStart → realMs → snowflakeFromMs → decideJump`, URL driver (`tabs.update`).
 - [x] Popup:
   - status
@@ -37,17 +37,26 @@ Tick items off as they land.
 - [ ] Badge, GitHub Actions (tests + both builds), `wxt zip`.
 
 ## Phase 4 – Vencord plugin (Discord desktop)
-- [ ] Clone Vencord to `..\Vencord` and run `pnpm i --frozen-lockfile`.
-- [ ] `scripts/sync-vencord.mjs` copies the plugin + core into `src/userplugins/yaydss/`.
-- [ ] `index.tsx`:
-  - `name: "YAYDSS"` must be the first property
-  - settings, chat-bar Follow toggle, toolbox "Copy pairing token"
-  - `handleTick` → `jumpToMessage` / `transitionTo`
-- [ ] `native.ts`:
-  - 127.0.0.1 HTTP server with token + Origin checks
+- [x] Clone Vencord to `..\Vencord` and run `pnpm i --frozen-lockfile`.
+- [x] `scripts/sync-vencord.mjs` (`pnpm vencord:sync` / `vencord:watch`) copies the plugin + core into `src/userplugins/yaydss/`, adding Vencord's license header.
+- [x] `index.tsx`:
+  - `name: "YAYDSS"` is the first property
+  - settings (follow, flash, port, token), chat-bar Follow toggle, toolbox actions
+  - `handleTick`:
+    - jumps to the newest *loaded* message ≤ target with `jumpToMessage`; otherwise `transitionTo` the computed ID
+    - automatic ticks don't pull you out of another channel
+- [x] `native.ts`:
+  - 127.0.0.1 HTTP server with token, Origin and Host checks
   - `waitForTick` long-poll
   - no work done at load time
-- [ ] Extension: `http://127.0.0.1/*` host permission, pairing form, `fetch` driver.
+  - tested in Node: 200 / 401 / 403 / 400, long-poll, port in use
+- [x] Vencord's `testTsc` and eslint pass on the plugin; it's in `pnpm build`.
+- [x] Extension:
+  - `http://127.0.0.1/*` host permission
+  - "Send to: Discord desktop" + port/token/Test in the popup
+  - `fetch` driver
+  - heartbeat 2 s, vencord interval 1.5 s
+- [x] **Manual test:** `pnpm inject`, enable the plugin, pair, sync: works in Discord desktop with no reload
 - [ ] Later: a web-Discord `postMessage` bridge.
 
 ## Phase 5 – Later / optional

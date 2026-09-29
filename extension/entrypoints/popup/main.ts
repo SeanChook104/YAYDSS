@@ -1,7 +1,7 @@
 import "./style.css";
 import { DISCORD_HOSTS, parseDiscordUrl, type DiscordChannel, type StartWarning } from "@yaydss/core";
-import { getVideoMemory, saveVideoMemory, settingsItem } from "@/utils/storage";
-import type { BackgroundMessage, JumpResult, Status } from "@/utils/types";
+import { getVideoMemory, saveVideoMemory, setSettings } from "@/utils/storage";
+import type { BackgroundMessage, JumpResult, Settings, Status, TestResult } from "@/utils/types";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = {
@@ -18,6 +18,13 @@ const el = {
     offsetRow: $("offset-row"),
     offset: $<HTMLInputElement>("offset"),
     auto: $<HTMLInputElement>("auto"),
+    autoLabel: $("auto-label"),
+    sendTo: $<HTMLSelectElement>("send-to"),
+    vencordBox: $("vencord-box"),
+    vPort: $<HTMLInputElement>("v-port"),
+    vToken: $<HTMLInputElement>("v-token"),
+    vTest: $<HTMLButtonElement>("v-test"),
+    vResult: $("v-result"),
     sync: $<HTMLButtonElement>("sync"),
     stop: $<HTMLButtonElement>("stop"),
     message: $("message"),
@@ -86,6 +93,15 @@ function render(s: Status) {
     for (const b of el.offsetRow.querySelectorAll("button, input")) (b as HTMLInputElement).disabled = !s.memory;
     if (document.activeElement !== el.offset) el.offset.value = String((s.memory?.offsetMs ?? 0) / 1000);
     el.auto.checked = s.settings.auto;
+    const vencord = s.settings.target === "vencord";
+    el.autoLabel.textContent = vencord
+        ? "Auto-follow: keeps Discord in step as the video plays"
+        : "Auto-follow: on play/seek and every 60 s";
+
+    el.sendTo.value = s.settings.target;
+    el.vencordBox.hidden = !vencord;
+    if (document.activeElement !== el.vPort) el.vPort.value = String(s.settings.vencordPort);
+    if (document.activeElement !== el.vToken) el.vToken.value = s.settings.vencordToken;
 
     el.sync.disabled = !s.report;
     el.stop.disabled = !syncing;
@@ -141,9 +157,27 @@ el.offset.addEventListener("change", () => {
     if (Number.isFinite(seconds)) void saveMemory({ offsetMs: Math.round(seconds * 1000) });
 });
 
-el.auto.addEventListener("change", async () => {
-    await settingsItem.setValue({ auto: el.auto.checked });
+async function saveSettings(patch: Partial<Settings>) {
+    await setSettings(patch);
     await refresh();
+}
+
+el.auto.addEventListener("change", () => void saveSettings({ auto: el.auto.checked }));
+el.sendTo.addEventListener("change", () => void saveSettings({ target: el.sendTo.value as Settings["target"] }));
+el.vToken.addEventListener("change", () => void saveSettings({ vencordToken: el.vToken.value.trim() }));
+el.vPort.addEventListener("change", () => {
+    const port = Number(el.vPort.value);
+    if (Number.isInteger(port) && port >= 1024 && port <= 65535) void saveSettings({ vencordPort: port });
+});
+
+el.vTest.addEventListener("click", async () => {
+    // Save whatever is typed before testing.
+    await setSettings({ vencordToken: el.vToken.value.trim(), vencordPort: Number(el.vPort.value) || 47810 });
+    el.vResult.textContent = "Testing…";
+    const result = await send<TestResult>({ type: "test-vencord" });
+    el.vResult.textContent = result?.ok ? "✓ Connected to Discord" : (result?.error ?? "Failed");
+    el.vResult.title = el.vResult.textContent;
+    el.vResult.dataset.kind = result?.ok ? "ok" : "error";
 });
 
 el.sync.addEventListener("click", async () => {
@@ -151,7 +185,7 @@ el.sync.addEventListener("click", async () => {
     const result = await send<JumpResult>({ type: "sync-now", tabId });
     if (!result) say("Something went wrong. Check the extension's console.", "error");
     else if (!result.ok) say(result.error, "error");
-    else say(`Discord → ${fmtTime(result.targetMs)}`);
+    else say(`Discord → ${fmtTime(result.targetMs)}${status?.settings.target === "vencord" ? " (desktop)" : ""}`);
     await refresh();
 });
 

@@ -1,9 +1,16 @@
 import { storage } from "#imports";
-import type { Settings, TabLink, VideoMemory } from "./types";
+import { DEFAULT_SETTINGS, type Settings, type TabLink, type VideoMemory } from "./types";
 
-export const settingsItem = storage.defineItem<Settings>("local:settings", {
-    fallback: { auto: true }
-});
+const settingsItem = storage.defineItem<Partial<Settings>>("local:settings", { fallback: {} });
+
+/** Saved settings on top of the defaults (older saves may miss newer fields). */
+export async function getSettings(): Promise<Settings> {
+    return { ...DEFAULT_SETTINGS, ...(await settingsItem.getValue()) };
+}
+
+export async function setSettings(patch: Partial<Settings>): Promise<void> {
+    await settingsItem.setValue({ ...(await getSettings()), ...patch });
+}
 
 /** videoId → channel + offset. Only IDs and numbers, never message content. */
 export const videoMemoryItem = storage.defineItem<Record<string, VideoMemory>>("local:videoMemory", {

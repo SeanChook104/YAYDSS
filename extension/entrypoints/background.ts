@@ -5,21 +5,25 @@ import {
     DISCORD_HOSTS,
     INITIAL_JUMP_STATE,
     parseDiscordUrl,
+    PROTOCOL_VERSION,
     realMs,
     recordJump,
     snowflakeFromMs,
     type DiscordChannel,
     type JumpReason,
-    type StartChoice
+    type StartChoice,
+    type Tick
 } from "@yaydss/core";
 import type { Browser } from "wxt/browser";
-import { getVideoMemory, linksItem, settingsItem } from "@/utils/storage";
+import { getSettings, getVideoMemory, linksItem } from "@/utils/storage";
 import type {
     BackgroundMessage,
     ContentMessage,
     JumpResult,
+    Settings,
     Status,
     TabLink,
+    TestResult,
     VideoMemory,
     VideoReport
 } from "@/utils/types";
@@ -58,6 +62,8 @@ async function handleMessage(msg: BackgroundMessage, sender: Browser.runtime.Mes
             return syncNow(msg.tabId);
         case "stop":
             return serial(() => setLink(msg.tabId, link => link && { ...link, enabled: false }));
+        case "test-vencord":
+            return testVencord();
     }
 }
 
@@ -89,14 +95,68 @@ async function jumpIfNeeded(tabId: number, link: TabLink, reason: JumpReason, re
     const { targetMs, problem } = computeTarget(report, memory);
     if (problem || targetMs == null || !memory) return { ok: false, error: problem ?? "Can't work out the time." };
 
-    const { auto } = await settingsItem.getValue();
+    const settings = await getSettings();
+    const mode = settings.target === "vencord" ? "vencord" : "url";
     const now = Date.now();
     const event = { reason, targetMs, videoPaused: report.paused };
-    if (!decideJump(link.jump, event, now, { mode: "url", auto })) return { ok: true, jumped: false, targetMs };
+    if (!decideJump(link.jump, event, now, { mode, auto: settings.auto })) return { ok: true, jumped: false, targetMs };
 
-    const discordTabId = await openInDiscord(link.discordTabId, memory.channel, targetMs);
+    let { discordTabId } = link;
+    if (mode === "vencord") {
+        const error = await sendToVencord(settings, makeTick(report, memory.channel, targetMs, reason));
+        if (error) return { ok: false, error };
+    } else {
+        discordTabId = await openInDiscord(discordTabId, memory.channel, targetMs);
+    }
     await setLink(tabId, () => ({ enabled: true, discordTabId, jump: recordJump(targetMs, now) }));
     return { ok: true, jumped: true, targetMs };
+}
+
+/** Increases even across service-worker restarts (Date.now based). */
+let lastSeq = 0;
+
+function makeTick(report: VideoReport, channel: DiscordChannel, targetMs: number, reason: JumpReason): Tick {
+    lastSeq = Math.max(lastSeq + 1, Date.now());
+    return {
+        v: PROTOCOL_VERSION,
+        seq: lastSeq,
+        sentAt: Date.now(),
+        videoId: report.videoId,
+        guildId: channel.guildId,
+        channelId: channel.channelId,
+        messageId: snowflakeFromMs(targetMs),
+        realMs: targetMs,
+        reason
+    };
+}
+
+/** Talk to the YAYDSS Vencord plugin in Discord desktop. Returns an error message, or null if OK. */
+async function callVencord(settings: Settings, path: "ping" | "tick", body?: Tick): Promise<string | null> {
+    if (!settings.vencordToken) return "Paste the pairing token from Discord first (Settings → Plugins → YAYDSS).";
+    try {
+        const res = await fetch(`http://127.0.0.1:${settings.vencordPort}/yaydss/v1/${path}`, {
+            method: body ? "POST" : "GET",
+            headers: {
+                Authorization: `Bearer ${settings.vencordToken}`,
+                ...(body && { "Content-Type": "application/json" })
+            },
+            body: body && JSON.stringify(body),
+            signal: AbortSignal.timeout(3000)
+        });
+        if (res.ok) return null;
+        if (res.status === 401) return "Wrong pairing token. Copy it again from Discord (Settings → Plugins → YAYDSS).";
+        const info = await res.json().catch(() => null);
+        return `The plugin answered ${res.status}${info?.error ? `: ${info.error}` : ""}.`;
+    } catch {
+        return `Can't reach Discord on port ${settings.vencordPort}. Is Discord desktop open with the YAYDSS plugin on?`;
+    }
+}
+
+const sendToVencord = (settings: Settings, tick: Tick) => callVencord(settings, "tick", tick);
+
+async function testVencord(): Promise<TestResult> {
+    const error = await callVencord(await getSettings(), "ping");
+    return error ? { ok: false, error } : { ok: true };
 }
 
 const NO_VIDEO = "Open a YouTube livestream VOD in this tab. (Just installed YAYDSS? Reload the YouTube tab.)";
@@ -149,7 +209,7 @@ async function findChannelTab(channel: DiscordChannel): Promise<Browser.tabs.Tab
 }
 
 async function getStatus(tabId: number): Promise<Status> {
-    const [report, settings, links] = await Promise.all([askReport(tabId), settingsItem.getValue(), linksItem.getValue()]);
+    const [report, settings, links] = await Promise.all([askReport(tabId), getSettings(), linksItem.getValue()]);
     const link = links[tabId] ?? null;
     if (!report) return { report, memory: null, choice: null, targetMs: null, link, settings, problem: NO_VIDEO };
 
