@@ -1,0 +1,10 @@
+{
+  "name": "yaydss",
+  "private": true,
+  "description": "YAYDSS – Yet Another YouTube Discord Sync Scroll",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
