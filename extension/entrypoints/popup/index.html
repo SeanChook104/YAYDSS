@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YAYDSS</title>
+    <meta name="manifest.type" content="browser_action" />
+  </head>
+  <body>
+    <header>
+      <h1>YAYDSS</h1>
+      <span id="state" class="pill">…</span>
+    </header>
+
+    <section class="video">
+      <div id="title" class="title">Loading…</div>
+      <div id="author" class="muted"></div>
+      <div id="start" class="muted"></div>
+      <ul id="notes" class="notes"></ul>
+    </section>
+
+    <p id="problem" class="problem" hidden></p>
+
+    <fieldset id="settings">
+      <label for="channel">Discord channel</label>
+      <input id="channel" type="url" placeholder="Paste link: right-click channel → Copy Link" />
+      <div class="row">
+        <button id="use-tab" type="button" class="secondary">Use current Discord tab</button>
+        <span id="channel-label" class="muted ellipsis"></span>
+      </div>
+
+      <label for="offset">Offset <span class="muted">(+ shows later chat)</span></label>
+      <div class="row offset" id="offset-row">
+        <button type="button" data-delta="-5000">−5</button>
+        <button type="button" data-delta="-1000">−1</button>
+        <input id="offset" type="number" step="1" value="0" />
+        <span>s</span>
+        <button type="button" data-delta="1000">+1</button>
+        <button type="button" data-delta="5000">+5</button>
+      </div>
+
+      <label class="check">
+        <input id="auto" type="checkbox" />
+        Auto-follow: on play/seek and every 60 s
+      </label>
+    </fieldset>
+
+    <div class="row actions">
+      <button id="sync" type="button" class="primary">Sync now</button>
+      <button id="stop" type="button" class="secondary">Stop</button>
+    </div>
+    <p id="message" class="message" aria-live="polite"></p>
+
+    <footer>
+      <div>Discord time: <strong id="target">–</strong></div>
+      <div class="muted">Shortcut: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></div>
+    </footer>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

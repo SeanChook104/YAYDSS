@@ -26,6 +26,13 @@ Newest at the bottom. Format: date – decision – why.
       - The URL mode can't control scrolling, so live with it (or the user sets a negative offset).
       - The Vencord plugin should line the target up with the **bottom** of the chat instead (Phase 4/5).
 
+13. **2026-09-29 – YouTube facts checked on real VODs** (in a browser):
+    - `movie_player.getPlayerResponse()` switches to the new video after an in-page click; `ytInitialPlayerResponse` stays on the old one.
+    - `yt-navigate-finish` still fires and carries `detail.response.playerResponse`.
+    - `liveBroadcastDetails.{startTimestamp,endTimestamp,isLiveNow}` and `videoDetails.isLiveContent` are present.
+    - For normal streams, `end − start` and the VOD length differ by only about 1 s. That confirms `startTimestamp` as VOD 0:00, with plenty of room under the 60 s threshold.
+    - During a pre-roll ad, `#movie_player` has `.ad-showing` and `<video>.duration` is the ad's length (6 s). So ads must be skipped.
+
 ## Test results to record
 - [x] **Phase 0 jump test:** where Discord lands for a computed (non-existent) message ID. See decision 12.
 - [ ] **Soft jump:** does `pushState` + `popstate` work with Discord's router?

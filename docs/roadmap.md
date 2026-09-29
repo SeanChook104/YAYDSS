@@ -10,23 +10,25 @@ Tick items off as they land.
 - [x] `snowflake`, `time`, `discordUrl`, `youtubeStart`, `policy`, `protocol`, plus vitest tests
 
 ## Phase 2 – Extension MVP (Chrome first)
-- [ ] Create the project: `pnpm dlx wxt@latest init extension` (vanilla).
-- [ ] Settings in `wxt.config.ts`:
+- [x] Create the project: `pnpm dlx wxt@latest init extension` (vanilla).
+- [x] Settings in `wxt.config.ts`:
   - `manifestVersion: 3`
   - hosts: `https://www.youtube.com/*`, `https://*.discord.com/*`
   - permissions: `storage`
   - a `sync-now` command
   - Firefox only: `gecko` id, `strict_min_version: "128.0"`, `data_collection_permissions`
-- [ ] `youtube-main.content.ts` (MAIN world): `getPlayerResponse()` + `yt-navigate-finish`, then `postMessage` the broadcast facts.
-- [ ] `youtube.content.ts`: `<video>` events + 5 s heartbeat, skip ads, JSON-LD fallback, send to the background.
-- [ ] `background.ts`: top-level listeners, `storage.session` tab links, `chooseStart → realMs → snowflakeFromMs → decideJump`, URL driver (`tabs.update`).
-- [ ] Popup:
+- [x] `youtube-main.content.ts` (MAIN world): `getPlayerResponse()` + `yt-navigate-finish`, then `postMessage` the broadcast facts.
+- [x] `youtube.content.ts`: `<video>` events + 5 s heartbeat, skip ads, JSON-LD fallback, send to the background.
+- [x] `background.ts`: top-level listeners, `storage.session` tab links, `chooseStart → realMs → snowflakeFromMs → decideJump`, URL driver (`tabs.update`).
+- [x] Popup:
   - status
   - channel link / "use current Discord tab"
   - offset ±1/±5
   - auto toggle
   - Sync now
   - per-video memory
+- [x] **Manual test in Chrome**: VOD detected, Sync now jumps to the right time and channel. Every jump reloads the Discord tab, as expected for URL mode.
+- [ ] Replace the placeholder WXT icons
 
 ## Phase 3 – Firefox + polish
 - [ ] `pnpm dev:firefox`, then load via `about:debugging` and check that `world: "MAIN"` made it into the manifest.

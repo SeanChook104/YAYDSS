@@ -42,6 +42,23 @@ dispatchEvent(new PopStateEvent("popstate", { state: null }));
 ```
 Did Discord move to that moment without reloading?
 
+## Load the extension
+**Chrome**
+1. Build it: `pnpm -F @yaydss/extension build`, or `pnpm -F @yaydss/extension dev` to rebuild on save into `chrome-mv3-dev`.
+2. Open `chrome://extensions` and switch on **Developer mode** (top right).
+3. Click **Load unpacked** and pick `extension/.output/chrome-mv3` (or `chrome-mv3-dev`).
+4. Pin it: puzzle icon → pin **YAYDSS**.
+5. After a rebuild, click the ↻ on the YAYDSS card, then **reload the YouTube tab**.
+
+**Firefox (128+)**
+1. Build it: `pnpm -F @yaydss/extension build:firefox`.
+2. Open `about:debugging#/runtime/this-firefox` and click **Load Temporary Add-on…**.
+3. Pick `extension/.output/firefox-mv3/manifest.json`. It stays loaded until Firefox closes.
+
+**Debugging**
+- Background: on the YAYDSS card, click **service worker** (Chrome) or **Inspect** (Firefox).
+- Content scripts: the YouTube tab's DevTools console.
+
 ## Extension checklist (Phase 2/3)
 Run each item in Chrome, then again in Firefox 128+.
 - [ ] Normal livestream VOD: Discord shows the right moment.

@@ -35,9 +35,11 @@ export function parseDiscordUrl(input: string): DiscordLocation | null {
     if (!(DISCORD_HOSTS as readonly string[]).includes(host)) return null;
 
     const m = PATH_RE.exec(url.pathname);
-    if (!m) return null;
+    const guildId = m?.[1];
+    const channelId = m?.[2];
+    const messageId = m?.[3];
+    if (!guildId || !channelId) return null;
 
-    const [, guildId, channelId, messageId] = m;
     return messageId
         ? { host: host as DiscordHost, guildId, channelId, messageId }
         : { host: host as DiscordHost, guildId, channelId };

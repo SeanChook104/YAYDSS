@@ -15,7 +15,8 @@ Later goal: show the YouTube chat replay alongside.
 - ✅ Phase 0 setup: pnpm workspace, git, GPL-3.0-or-later, `docs/`.
 - ✅ Phase 0 manual jump test: computed IDs work; the target lands mid-screen with no highlight (`docs/decisions.md` #12).
 - ✅ Phase 1: `packages/core`. Pure TS with vitest; all tests pass.
-- ▶️ **Next:** Phase 2, the WXT extension MVP (`docs/roadmap.md`).
+- ✅ Phase 2: WXT extension. Builds for Chrome and Firefox MV3. The user tested it in Chrome: correct time and channel, but every URL jump reloads Discord (expected).
+- ▶️ **Next:** the main target is the Discord **desktop** app, so the Vencord plugin (Phase 4) matters most. Phase 3 (Firefox check, soft jump, calibrate) is browser polish.
 
 ## Key constraints (do not violate)
 
@@ -44,7 +45,7 @@ url = https://discord.com/channels/<guild_id>/<channel_id>/<message_id>
 
 ```
 packages/core/    shared maths: snowflake, time, discordUrl, youtubeStart (chooseStart), policy (decideJump), protocol (Tick)
-extension/        WXT project (Phase 2): not created yet
+extension/        WXT project: entrypoints/{background, youtube-main.content (MAIN world), youtube.content, popup/}, utils/{types, storage}
 vencord-plugin/   userplugin (Phase 4): not created yet; copied into Vencord by scripts/sync-vencord.mjs (a symlink breaks Vencord's tsconfig aliases)
 scripts/          jump-url.mjs (manual test helper)
 docs/             apis, architecture, decisions, prior-art, roadmap, testing
