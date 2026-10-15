@@ -7,7 +7,8 @@ export type JumpMode =
     /** Vencord plugin jumps in-app. */
     | "vencord";
 
-export type JumpReason = "manual" | "seek" | "play" | "interval";
+/** "pause" never jumps by itself, but the Vencord plugin is told so its clock stops. */
+export type JumpReason = "manual" | "seek" | "play" | "pause" | "interval";
 
 /** Minimum gap between automatic jumps, per mode. URL jumps reload Discord, so they are rare. */
 export const MIN_INTERVAL_MS: Record<JumpMode, number> = {
@@ -42,6 +43,7 @@ export const INITIAL_JUMP_STATE: JumpState = { lastJumpAt: null, lastTargetMs: n
 
 export function decideJump(state: JumpState, event: JumpEvent, now: number, opts: JumpOptions): boolean {
     if (event.reason === "manual") return true;
+    if (event.reason === "pause") return false;
     if (!opts.auto || event.videoPaused) return false;
 
     if (event.reason === "seek" || event.reason === "play") {

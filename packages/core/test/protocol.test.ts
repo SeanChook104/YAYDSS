@@ -33,3 +33,14 @@ describe("isTick", () => {
         expect(isTick(x)).toBe(false);
     });
 });
+
+describe("isTick: playing flag", () => {
+    it("accepts pause ticks and the optional playing flag", () => {
+        expect(isTick({ ...tick, reason: "pause", playing: false })).toBe(true);
+        expect(isTick({ ...tick, playing: true })).toBe(true);
+    });
+
+    it("rejects a non-boolean playing flag", () => {
+        expect(isTick({ ...tick, playing: "yes" })).toBe(false);
+    });
+});

@@ -21,6 +21,7 @@ Later goal: show the YouTube chat replay alongside.
 - ✅ Firefox: the user tested it in Firefox 156 (temporary add-on) with the Discord desktop target. Min version 140; web-ext lint is clean.
 - ✅ The plugin puts the VOD moment at the **bottom** of the chat (Position setting, smooth scroll). The user tested it in Discord desktop (`docs/decisions.md` #14).
 - ✅ README has install + usage steps for the extension (Chrome/Firefox) and the plugin.
+- ✅ Phase 6 (roadmap): local video files lined up with YouTube, plus the plugin's own clock (▶/⏸, nudges, start from a message). The user tested both.
 - ▶️ **Next:** pick from Phase 3 (soft jump, calibrate) and Phase 5 (icons, AMO signing, chat replay).
 
 ## Key constraints (do not violate)
@@ -50,7 +51,7 @@ url = https://discord.com/channels/<guild_id>/<channel_id>/<message_id>
 
 ```
 packages/core/    shared maths: snowflake, time, discordUrl, youtubeStart (chooseStart), policy (decideJump), protocol (Tick)
-extension/        WXT project: entrypoints/{background, youtube-main.content (MAIN world), youtube.content, popup/}, utils/{types, storage}
+extension/        WXT project: entrypoints/{background, youtube-main.content (MAIN world), youtube.content, file.content, popup/}, utils/{types, storage, watchVideo}
 vencord-plugin/   userplugin: src/{index.tsx, native.ts, style.css}. Copied (with core → core/) into ..\Vencord\src\userplugins\yaydss by `pnpm vencord:sync`. A symlink breaks Vencord's tsconfig aliases.
 scripts/          jump-url.mjs (manual test helper)
 docs/             apis, architecture, decisions, prior-art, roadmap, testing

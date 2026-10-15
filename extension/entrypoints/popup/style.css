@@ -140,3 +140,17 @@ kbd {
   border-radius: 4px;
   font: 11px ui-monospace, monospace;
 }
+
+.lineup { display: grid; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.lineup input[type="text"] {
+  width: 64px;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--field);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+#lu-result[data-kind="ok"] { color: var(--ok); }
+#lu-result[data-kind="error"] { color: var(--error); }

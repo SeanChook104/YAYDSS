@@ -43,3 +43,5 @@ Newest at the bottom. Format: date – decision – why.
 ## Test results to record
 - [x] **Phase 0 jump test:** where Discord lands for a computed (non-existent) message ID. See decision 12.
 - [ ] **Soft jump:** does `pushState` + `popstate` work with Discord's router?
+
+15. **2026-10-16 – Two ways past YouTube.** A video file can be lined up with the YouTube VOD at one shared moment (`lineUpStart`). The Vencord plugin got its own clock, so it scrolls smoothly between ticks and can run with no browser (start from a message, ▶/⏸, nudges). Extension mode stays the most exact, because it follows pauses and seeks by itself.

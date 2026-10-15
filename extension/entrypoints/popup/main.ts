@@ -1,7 +1,7 @@
 import "./style.css";
-import { DISCORD_HOSTS, parseDiscordUrl, type DiscordChannel, type StartWarning } from "@yaydss/core";
-import { getVideoMemory, saveVideoMemory, setSettings } from "@/utils/storage";
-import type { BackgroundMessage, JumpResult, Settings, Status, TestResult } from "@/utils/types";
+import { DISCORD_HOSTS, formatClock, parseClock, parseDiscordUrl, type DiscordChannel, type StartWarning } from "@yaydss/core";
+import { setSettings, updateVideoMemory } from "@/utils/storage";
+import type { BackgroundMessage, JumpResult, LineUpResult, Settings, Status, TestResult, VideoMemory } from "@/utils/types";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = {
@@ -14,6 +14,13 @@ const el = {
     notes: $("notes"),
     problem: $("problem"),
     settings: $<HTMLFieldSetElement>("settings"),
+    lineup: $("lineup"),
+    luUrl: $<HTMLInputElement>("lu-url"),
+    luYt: $<HTMLInputElement>("lu-yt"),
+    luVideo: $<HTMLInputElement>("lu-video"),
+    luNow: $<HTMLButtonElement>("lu-now"),
+    luGo: $<HTMLButtonElement>("lu-go"),
+    luResult: $("lu-result"),
     channel: $<HTMLInputElement>("channel"),
     useTab: $<HTMLButtonElement>("use-tab"),
     channelLabel: $("channel-label"),
@@ -42,6 +49,8 @@ const WARNINGS: Record<StartWarning, string> = {
 
 let tabId: number | null = null;
 let status: Status | null = null;
+/** Chrome only lets extensions into file:// tabs after a switch in its settings. */
+let fileAccess = true;
 
 const send = <T>(msg: BackgroundMessage) => browser.runtime.sendMessage(msg) as Promise<T>;
 const fmtTime = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "medium" });
@@ -68,10 +77,11 @@ function render(s: Status) {
     el.title.textContent = facts?.title || (s.report ? "YouTube video" : "No video");
     el.author.textContent = facts?.author ?? "";
     el.start.textContent =
-        s.choice?.startMs != null
-            ? `Stream start: ${fmtTime(s.choice.startMs)}` +
-              (s.choice.anchor === "end-minus-duration" ? " (from end − length)" : "")
-            : "";
+        s.startMs == null
+            ? ""
+            : s.startSource === "lined-up"
+              ? `Video start: ${fmtTime(s.startMs)} (lined up with YouTube)`
+              : `Stream start: ${fmtTime(s.startMs)}` + (s.choice?.anchor === "end-minus-duration" ? " (from end − length)" : "");
 
     const notes = [
         ...(s.choice?.kind === "premiere" ? ["Premiere: start is worked out from the end, to skip the countdown."] : []),
@@ -85,14 +95,18 @@ function render(s: Status) {
         })
     );
 
-    el.problem.hidden = !s.problem;
-    el.problem.textContent = s.problem ?? "";
+    const problem =
+        !s.report && !fileAccess
+            ? `${s.problem} For a video file: open chrome://extensions → YAYDSS → Details → switch on "Allow access to file URLs".`
+            : s.problem;
+    el.problem.hidden = !problem;
+    el.problem.textContent = problem ?? "";
 
     el.settings.disabled = !s.report;
+    renderLineUp(s);
     // Don't overwrite what the user is typing.
-    if (document.activeElement !== el.channel) el.channel.value = s.memory ? channelLink(s.memory.channel) : "";
+    if (document.activeElement !== el.channel) el.channel.value = s.memory?.channel ? channelLink(s.memory.channel) : "";
     el.channelLabel.textContent = s.memory?.channelLabel ?? "";
-    for (const b of el.offsetRow.querySelectorAll("button, input")) (b as HTMLInputElement).disabled = !s.memory;
     if (document.activeElement !== el.offset) el.offset.value = String((s.memory?.offsetMs ?? 0) / 1000);
     el.auto.checked = s.settings.auto;
     const vencord = s.settings.target === "vencord";
@@ -110,20 +124,55 @@ function render(s: Status) {
     el.target.textContent = s.targetMs != null ? fmtTime(s.targetMs) : "–";
 }
 
-/** Save channel and/or offset for the current video. */
-async function saveMemory(patch: { channel?: DiscordChannel; channelLabel?: string; offsetMs?: number }) {
+/** "Line up with YouTube" box: only for local video files (or videos already lined up). */
+function renderLineUp(s: Status) {
+    el.lineup.hidden = !(s.report?.facts?.source === "file" || s.startSource === "lined-up");
+    const saved = s.memory?.lineUp;
+    if (!saved) return;
+    // Show what was used last time, unless the user is editing.
+    const typing = [el.luUrl, el.luYt, el.luVideo].includes(document.activeElement as HTMLInputElement);
+    if (typing || el.luUrl.value || el.luYt.value || el.luVideo.value) return;
+    el.luUrl.value = saved.youtubeUrl;
+    el.luYt.value = formatClock(saved.youtubeSeconds);
+    el.luVideo.value = formatClock(saved.videoSeconds);
+}
+
+/** Save channel / offset for the current video. */
+async function saveMemory(patch: Partial<Pick<VideoMemory, "channel" | "channelLabel" | "offsetMs">>) {
     const videoId = status?.report?.videoId;
     if (!videoId) return;
-    const current = await getVideoMemory(videoId);
-    const channel = patch.channel ?? current?.channel;
-    if (!channel) return;
-    await saveVideoMemory(videoId, {
-        channel,
-        channelLabel: patch.channel ? patch.channelLabel : current?.channelLabel,
-        offsetMs: patch.offsetMs ?? current?.offsetMs ?? 0
-    });
+    await updateVideoMemory(videoId, patch);
     await refresh();
 }
+
+el.luNow.addEventListener("click", () => {
+    if (status?.report) el.luVideo.value = formatClock(status.report.currentTime);
+});
+
+el.luGo.addEventListener("click", async () => {
+    const videoId = status?.report?.videoId;
+    const youtubeSeconds = parseClock(el.luYt.value);
+    const videoSeconds = parseClock(el.luVideo.value);
+    const show = (text: string, kind: "ok" | "error") => {
+        el.luResult.textContent = text;
+        el.luResult.title = text;
+        el.luResult.dataset.kind = kind;
+    };
+    if (!videoId) return;
+    if (youtubeSeconds == null || videoSeconds == null) return show("Type both times, like 12:40 or 1:02:03.", "error");
+
+    show("Checking YouTube…", "ok");
+    const result = await send<LineUpResult>({
+        type: "line-up",
+        videoId,
+        youtubeUrl: el.luUrl.value.trim(),
+        youtubeSeconds,
+        videoSeconds
+    });
+    if (!result?.ok) return show(result?.error ?? "Failed", "error");
+    show(`✓ Lined up. This video started ${fmtTime(result.startMs)}`, "ok");
+    await refresh();
+});
 
 el.channel.addEventListener("change", async () => {
     const value = el.channel.value.trim();
@@ -214,6 +263,7 @@ el.grant.addEventListener("click", () => {
 
 async function start() {
     el.access.hidden = await browser.permissions.contains(SITE_ACCESS);
+    if (!import.meta.env.FIREFOX) fileAccess = await browser.extension.isAllowedFileSchemeAccess();
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     tabId = tab?.id ?? null;
     await refresh();

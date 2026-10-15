@@ -27,6 +27,23 @@
     <p id="problem" class="problem" hidden></p>
 
     <fieldset id="settings">
+      <section id="lineup" class="lineup" hidden>
+        <label for="lu-url">Line up with the YouTube stream</label>
+        <input id="lu-url" type="url" placeholder="YouTube link of the stream (VOD)" />
+        <div class="muted">Pick one moment that's in both, e.g. when the first song starts:</div>
+        <div class="row">
+          <span>YouTube</span>
+          <input id="lu-yt" type="text" placeholder="12:40" />
+          <span>= this video</span>
+          <input id="lu-video" type="text" placeholder="15:05" />
+          <button id="lu-now" type="button" title="Use this video's current time">Now</button>
+        </div>
+        <div class="row">
+          <button id="lu-go" type="button" class="secondary">Line up</button>
+          <span id="lu-result" class="muted ellipsis"></span>
+        </div>
+      </section>
+
       <label for="channel">Discord channel</label>
       <input id="channel" type="url" placeholder="Paste link: right-click channel → Copy Link" />
       <div class="row">

@@ -38,3 +38,10 @@ describe("decideJump", () => {
         expect(decideJump(state, far, NOW + 1, auto)).toBe(true);
     });
 });
+
+describe("decideJump: pause", () => {
+    it("never jumps on pause", () => {
+        const e = { reason: "pause" as const, targetMs: T, videoPaused: true };
+        expect(decideJump(INITIAL_JUMP_STATE, e, NOW, { mode: "vencord", auto: true })).toBe(false);
+    });
+});

@@ -66,3 +66,16 @@ Tick items off as they land.
 - YouTube chat replay (ToS risk).
 - Chrome Web Store / AMO listings.
 - Submit the plugin to Vencord.
+
+## Phase 6 – Beyond YouTube (2026-10)
+- [x] **Local video files** (extension):
+  - `file.content.ts` watches the `<video>` in a `file://` tab; the shared watcher is in `utils/watchVideo.ts`.
+  - Popup "Line up with the YouTube stream": one moment in both → the file's 0:00 real time, saved per file name.
+  - The background fetches the YouTube page and reads its stream start with `parseWatchPage`.
+  - Chrome needs "Allow access to file URLs".
+- [x] **Plugin clock** (Vencord): the chat keeps moving between ticks and without the extension.
+  - Chat-bar ▶/⏸ with a right-click menu (±5 s / ±30 s, Follow, Stop).
+  - Right-click a message → "start clock here" / "play from here".
+  - Ticks carry `playing`; the extension tells the plugin about pauses and seeks while paused.
+- [x] Plugin uses Vencord's new `showToast({ text, variant })` API (Vencord changed it on 2026-10-14).
+- [x] **Manual test** by the user: concert file + line-up, and clock mode: both work.

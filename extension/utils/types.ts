@@ -1,6 +1,6 @@
 import type { BroadcastInfo, DiscordChannel, JumpState, StartChoice } from "@yaydss/core";
 
-/** What youtube-main.content.ts reads from YouTube's player (or the JSON-LD fallback). */
+/** What youtube-main.content.ts reads from YouTube's player (or the JSON-LD fallback), or a local file's name. */
 export interface VideoFacts {
     videoId: string;
     title: string;
@@ -8,10 +8,10 @@ export interface VideoFacts {
     lengthSeconds: number | null;
     /** null = not a livestream / premiere. */
     broadcast: BroadcastInfo | null;
-    source: "player" | "json-ld";
+    source: "player" | "json-ld" | "file";
 }
 
-/** Snapshot the YouTube content script sends to the background. */
+/** Snapshot the YouTube / file content script sends to the background. */
 export interface VideoReport {
     videoId: string;
     facts: VideoFacts | null;
@@ -27,12 +27,16 @@ export interface VideoReport {
 
 export type ReportReason = "heartbeat" | "play" | "pause" | "seek";
 
-/** Remembered per video: which channel it syncs to and the offset. */
+/** Remembered per video (or file): which channel it syncs to, the offset, and a lined-up start. */
 export interface VideoMemory {
-    channel: DiscordChannel;
+    channel?: DiscordChannel;
     /** Tab title when the channel was picked, just for display. */
     channelLabel?: string;
     offsetMs: number;
+    /** Real time of this video's 0:00 when it was lined up with a YouTube VOD (local files). */
+    startMs?: number;
+    /** What the user typed to line it up, to show it again. */
+    lineUp?: { youtubeUrl: string; youtubeSeconds: number; videoSeconds: number };
     updatedAt: number;
 }
 
@@ -68,6 +72,9 @@ export interface Status {
     report: VideoReport | null;
     memory: VideoMemory | null;
     choice: StartChoice | null;
+    /** Real time of the video's 0:00, from YouTube or from lining up. */
+    startMs: number | null;
+    startSource: "youtube" | "lined-up" | null;
     targetMs: number | null;
     link: TabLink | null;
     settings: Settings;
@@ -81,9 +88,12 @@ export type BackgroundMessage =
     | { type: "get-status"; tabId: number }
     | { type: "sync-now"; tabId: number }
     | { type: "stop"; tabId: number }
-    | { type: "test-vencord" };
+    | { type: "test-vencord" }
+    | { type: "line-up"; videoId: string; youtubeUrl: string; youtubeSeconds: number; videoSeconds: number };
 
 export type TestResult = { ok: true } | { ok: false; error: string };
+
+export type LineUpResult = { ok: true; startMs: number; youtubeStartMs: number } | { ok: false; error: string };
 
 /** Messages to the YouTube content script. */
 export type ContentMessage = { type: "get-report" };

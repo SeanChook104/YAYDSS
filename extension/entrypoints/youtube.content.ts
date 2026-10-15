@@ -1,17 +1,6 @@
 import { youtubeVideoIdFromUrl } from "@yaydss/core";
-import {
-    FROM_ISOLATED,
-    FROM_MAIN,
-    type BackgroundMessage,
-    type ContentMessage,
-    type ReportReason,
-    type VideoFacts,
-    type VideoReport
-} from "@/utils/types";
-
-const HEARTBEAT_MS = 2000;
-/** Dragging the seek bar fires several "seeked" events; only send the last one. */
-const SEEK_DEBOUNCE_MS = 800;
+import { FROM_ISOLATED, FROM_MAIN, type VideoFacts } from "@/utils/types";
+import { watchVideo } from "@/utils/watchVideo";
 
 /**
  * Watches the YouTube player and reports the VOD position to the background.
@@ -21,8 +10,6 @@ export default defineContentScript({
     matches: ["https://www.youtube.com/*"],
     main(ctx) {
         let facts: VideoFacts | null = null;
-        let video: HTMLVideoElement | null = null;
-        let seekTimer: ReturnType<typeof setTimeout> | undefined;
 
         const requestFacts = () => window.postMessage({ source: FROM_ISOLATED, type: "request-facts" }, location.origin);
 
@@ -43,79 +30,32 @@ export default defineContentScript({
             return jsonLdFacts(videoId);
         }
 
-        function buildReport(): VideoReport | null {
-            const videoId = youtubeVideoIdFromUrl(location.href);
-            if (!videoId || !video) return null;
-            const ad = document.getElementById("movie_player")?.classList.contains("ad-showing") ?? false;
-            return {
-                videoId,
-                facts: currentFacts(videoId),
-                currentTime: video.currentTime,
-                duration: !ad && Number.isFinite(video.duration) ? video.duration : null,
-                paused: video.paused,
-                ad,
-                at: Date.now()
-            };
-        }
-
-        async function send(reason: ReportReason) {
-            if (ctx.isInvalid) return;
-            const report = buildReport();
-            if (!report) return;
-            try {
-                await browser.runtime.sendMessage({ type: "yt-report", reason, report } satisfies BackgroundMessage);
-            } catch {
-                // background not ready, or the extension was reloaded
+        const attach = watchVideo(
+            ctx,
+            () => document.querySelector<HTMLVideoElement>("#movie_player video"),
+            video => {
+                const videoId = youtubeVideoIdFromUrl(location.href);
+                if (!videoId) return null;
+                const ad = document.getElementById("movie_player")?.classList.contains("ad-showing") ?? false;
+                return {
+                    videoId,
+                    facts: currentFacts(videoId),
+                    currentTime: video.currentTime,
+                    duration: !ad && Number.isFinite(video.duration) ? video.duration : null,
+                    paused: video.paused,
+                    ad,
+                    at: Date.now()
+                };
             }
-        }
-
-        const onPlay = () => send("play");
-        const onPause = () => send("pause");
-        const onSeeked = () => {
-            clearTimeout(seekTimer);
-            seekTimer = setTimeout(() => send("seek"), SEEK_DEBOUNCE_MS);
-        };
-
-        /** YouTube reuses one <video> but may swap it; re-check every heartbeat. */
-        function attachVideo() {
-            const v = document.querySelector<HTMLVideoElement>("#movie_player video");
-            if (v === video) return;
-            if (video) {
-                video.removeEventListener("play", onPlay);
-                video.removeEventListener("pause", onPause);
-                video.removeEventListener("seeked", onSeeked);
-            }
-            video = v;
-            video?.addEventListener("play", onPlay);
-            video?.addEventListener("pause", onPause);
-            video?.addEventListener("seeked", onSeeked);
-        }
+        );
 
         document.addEventListener("yt-navigate-finish", () => {
             if (ctx.isInvalid) return;
             facts = null;
             requestFacts();
-            attachVideo();
+            attach();
         });
 
-        browser.runtime.onMessage.addListener((msg: ContentMessage, _sender, sendResponse) => {
-            if (msg?.type !== "get-report") return;
-            attachVideo();
-            sendResponse(buildReport());
-        });
-
-        ctx.setInterval(() => {
-            attachVideo();
-            void send("heartbeat");
-        }, HEARTBEAT_MS);
-        ctx.onInvalidated(() => {
-            clearTimeout(seekTimer);
-            video?.removeEventListener("play", onPlay);
-            video?.removeEventListener("pause", onPause);
-            video?.removeEventListener("seeked", onSeeked);
-        });
-
-        attachVideo();
         requestFacts();
     }
 });

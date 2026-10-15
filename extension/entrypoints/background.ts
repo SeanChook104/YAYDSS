@@ -4,7 +4,9 @@ import {
     decideJump,
     DISCORD_HOSTS,
     INITIAL_JUMP_STATE,
+    lineUpStart,
     parseDiscordUrl,
+    parseWatchPage,
     PROTOCOL_VERSION,
     realMs,
     recordJump,
@@ -12,14 +14,16 @@ import {
     type DiscordChannel,
     type JumpReason,
     type StartChoice,
-    type Tick
+    type Tick,
+    youtubeVideoIdFromUrl
 } from "@yaydss/core";
 import type { Browser } from "wxt/browser";
-import { getSettings, getVideoMemory, linksItem } from "@/utils/storage";
+import { getSettings, getVideoMemory, linksItem, updateVideoMemory } from "@/utils/storage";
 import type {
     BackgroundMessage,
     ContentMessage,
     JumpResult,
+    LineUpResult,
     Settings,
     Status,
     TabLink,
@@ -52,7 +56,7 @@ async function handleMessage(msg: BackgroundMessage, sender: Browser.runtime.Mes
     switch (msg.type) {
         case "yt-report": {
             const tabId = sender.tab?.id;
-            if (tabId == null || msg.reason === "pause") return;
+            if (tabId == null) return;
             const reason: JumpReason = msg.reason === "heartbeat" ? "interval" : msg.reason;
             return serial(() => onReport(tabId, reason, msg.report));
         }
@@ -64,6 +68,8 @@ async function handleMessage(msg: BackgroundMessage, sender: Browser.runtime.Mes
             return serial(() => setLink(msg.tabId, link => link && { ...link, enabled: false }));
         case "test-vencord":
             return testVencord();
+        case "line-up":
+            return lineUp(msg);
     }
 }
 
@@ -93,20 +99,25 @@ async function syncNow(tabId: number): Promise<JumpResult> {
 async function jumpIfNeeded(tabId: number, link: TabLink, reason: JumpReason, report: VideoReport): Promise<JumpResult> {
     const memory = await getVideoMemory(report.videoId);
     const { targetMs, problem } = computeTarget(report, memory);
-    if (problem || targetMs == null || !memory) return { ok: false, error: problem ?? "Can't work out the time." };
+    const channel = memory?.channel;
+    if (problem || targetMs == null || !channel) return { ok: false, error: problem ?? "Can't work out the time." };
 
     const settings = await getSettings();
     const mode = settings.target === "vencord" ? "vencord" : "url";
     const now = Date.now();
     const event = { reason, targetMs, videoPaused: report.paused };
-    if (!decideJump(link.jump, event, now, { mode, auto: settings.auto })) return { ok: true, jumped: false, targetMs };
+    // The plugin runs its own clock, so it must hear about pauses and seeks while paused.
+    const tellPlugin = mode === "vencord" && (reason === "pause" || (reason === "seek" && report.paused));
+    if (!tellPlugin && !decideJump(link.jump, event, now, { mode, auto: settings.auto })) {
+        return { ok: true, jumped: false, targetMs };
+    }
 
     let { discordTabId } = link;
     if (mode === "vencord") {
-        const error = await sendToVencord(settings, makeTick(report, memory.channel, targetMs, reason));
+        const error = await sendToVencord(settings, makeTick(report, channel, targetMs, reason));
         if (error) return { ok: false, error };
     } else {
-        discordTabId = await openInDiscord(discordTabId, memory.channel, targetMs);
+        discordTabId = await openInDiscord(discordTabId, channel, targetMs);
     }
     await setLink(tabId, () => ({ enabled: true, discordTabId, jump: recordJump(targetMs, now) }));
     return { ok: true, jumped: true, targetMs };
@@ -126,7 +137,8 @@ function makeTick(report: VideoReport, channel: DiscordChannel, targetMs: number
         channelId: channel.channelId,
         messageId: snowflakeFromMs(targetMs),
         realMs: targetMs,
-        reason
+        reason,
+        playing: !report.paused
     };
 }
 
@@ -159,25 +171,60 @@ async function testVencord(): Promise<TestResult> {
     return error ? { ok: false, error } : { ok: true };
 }
 
-const NO_VIDEO = "Open a YouTube livestream VOD in this tab. (Just installed YAYDSS? Reload the YouTube tab.)";
+const NO_VIDEO = "Open a YouTube livestream VOD (or a video file) in this tab. Just installed or updated YAYDSS? Reload the tab.";
 
-/** The real-world moment the VOD shows, or why we can't tell. */
+/** The real-world moment the video shows, or why we can't tell. */
 function computeTarget(
     report: VideoReport,
     memory: VideoMemory | null
-): { choice: StartChoice; targetMs: number | null; problem: string | null } {
+): Pick<Status, "choice" | "startMs" | "startSource" | "targetMs" | "problem"> {
     const choice = chooseStart(report.facts?.broadcast, report.facts?.lengthSeconds ?? report.duration);
-    const targetMs =
-        choice.startMs != null && !report.ad ? realMs(choice.startMs, report.currentTime, memory?.offsetMs ?? 0) : null;
+    // A lined-up start (local files) wins over YouTube's.
+    const startMs = memory?.startMs ?? choice.startMs;
+    const startSource = memory?.startMs != null ? "lined-up" : choice.startMs != null ? "youtube" : null;
+    const targetMs = startMs != null && !report.ad ? realMs(startMs, report.currentTime, memory?.offsetMs ?? 0) : null;
 
     let problem: string | null = null;
     if (!report.facts) problem = "Reading the video info… Reload the YouTube tab if this doesn't go away.";
-    else if (choice.kind === "live-now") problem = "This stream is live right now. YAYDSS only works with VODs.";
-    else if (choice.startMs == null) problem = "This video wasn't a livestream or premiere, so there's no chat time to sync.";
+    else if (startMs == null && report.facts.source === "file") problem = "Line this video up with the YouTube stream first (below).";
+    else if (startMs == null && choice.kind === "live-now") problem = "This stream is live right now. YAYDSS only works with VODs.";
+    else if (startMs == null) problem = "This video wasn't a livestream or premiere, so there's no chat time to sync.";
     else if (report.ad) problem = "Waiting for the ad to finish.";
-    else if (!memory) problem = "Pick a Discord channel for this video first.";
+    else if (!memory?.channel) problem = "Pick a Discord channel for this video first.";
 
-    return { choice, targetMs, problem };
+    return { choice, startMs, startSource, targetMs, problem };
+}
+
+/**
+ * Give a video (e.g. a local file of the full concert) a start time by matching
+ * one moment that is in both it and a YouTube livestream VOD.
+ * Fetches the YouTube page to read that stream's start time.
+ */
+async function lineUp(msg: Extract<BackgroundMessage, { type: "line-up" }>): Promise<LineUpResult> {
+    const youtubeId = youtubeVideoIdFromUrl(msg.youtubeUrl);
+    if (!youtubeId) return { ok: false, error: "That isn't a YouTube video link." };
+
+    let html: string;
+    try {
+        const res = await fetch(`https://www.youtube.com/watch?v=${youtubeId}`, { credentials: "omit" });
+        html = await res.text();
+    } catch {
+        return { ok: false, error: "Couldn't load the YouTube page. Are you online?" };
+    }
+    const info = parseWatchPage(html);
+    const youtubeStartMs = chooseStart(info.broadcast, info.lengthSeconds).startMs;
+    if (youtubeStartMs == null) return { ok: false, error: "That YouTube video isn't a livestream or premiere VOD." };
+
+    const startMs = lineUpStart(youtubeStartMs, msg.youtubeSeconds, msg.videoSeconds);
+    // Reuse the YouTube video's channel and offset if this video has none yet.
+    const [current, youtube] = await Promise.all([getVideoMemory(msg.videoId), getVideoMemory(youtubeId)]);
+    await updateVideoMemory(msg.videoId, {
+        startMs,
+        lineUp: { youtubeUrl: msg.youtubeUrl, youtubeSeconds: msg.youtubeSeconds, videoSeconds: msg.videoSeconds },
+        ...(!current?.channel && youtube?.channel && { channel: youtube.channel, channelLabel: youtube.channelLabel }),
+        ...(!current && youtube && { offsetMs: youtube.offsetMs })
+    });
+    return { ok: true, startMs, youtubeStartMs };
 }
 
 /** Point a Discord tab at the moment (reuses the synced tab, else a tab on that channel, else opens one). */
@@ -211,7 +258,9 @@ async function findChannelTab(channel: DiscordChannel): Promise<Browser.tabs.Tab
 async function getStatus(tabId: number): Promise<Status> {
     const [report, settings, links] = await Promise.all([askReport(tabId), getSettings(), linksItem.getValue()]);
     const link = links[tabId] ?? null;
-    if (!report) return { report, memory: null, choice: null, targetMs: null, link, settings, problem: NO_VIDEO };
+    if (!report) {
+        return { report, memory: null, choice: null, startMs: null, startSource: null, targetMs: null, link, settings, problem: NO_VIDEO };
+    }
 
     const memory = await getVideoMemory(report.videoId);
     return { report, memory, link, settings, ...computeTarget(report, memory) };

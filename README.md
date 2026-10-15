@@ -88,6 +88,30 @@ Open a YouTube VOD, click the **YAYDSS** icon, and set **Send to**:
 4. Press **Sync now** (or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> on the YouTube tab).
 5. Play the video. With **Auto-follow** on, Discord keeps up as the video plays and when you skip around.
 
+### A video file instead of YouTube (e.g. the full concert)
+Useful when YouTube only has part of the stream and you have the full recording.
+
+1. **One time, Chrome only:** open `chrome://extensions` → **YAYDSS** → **Details** → switch on **Allow access to file URLs**.
+2. Drag the video file into a Chrome tab. It plays in Chrome's own player.
+3. Click the **YAYDSS** icon. A **Line up with the YouTube stream** box appears:
+   - Paste the YouTube link of the stream (the part that's on YouTube is enough).
+   - Find **one moment that's in both**, like the first song starting. Type its time on YouTube (e.g. `12:40`) and in your file (e.g. `15:05`). **Now** fills in the file's current time.
+   - Click **Line up**. YAYDSS works out the real time of the file's 0:00 and remembers it for this file name. It also copies the channel and offset from the YouTube video, if you've set them there.
+4. Use **Sync now** and **Auto-follow** as usual. It keeps going for the whole file.
+
+If the recording has cuts, the chat drifts after a cut; fix it with **Offset**.
+
+### Without the extension: the plugin's own clock (Discord desktop)
+The plugin keeps its own clock, so the chat keeps scrolling smoothly between updates. It can also run with **no browser at all**, e.g. while you watch in VLC or on a TV.
+
+1. In Discord, find a message from the moment your video starts (or any moment you can match).
+2. Right-click it → **YAYDSS: start clock here (paused)**.
+3. Press play on your video and click **▶** in Discord's chat bar at the same moment. Or use **YAYDSS: play from here** to start straight away.
+4. When you pause the video, click **⏸** in Discord too.
+5. If the chat feels early or late, right-click the ▶/⏸ button → **Back / Forward 5 s or 30 s**.
+
+When the extension is syncing, it drives the clock: pausing or seeking the video pauses or moves the clock.
+
 ### Popup at a glance
 | Item | Meaning |
 |---|---|
@@ -100,11 +124,18 @@ Open a YouTube VOD, click the **YAYDSS** icon, and set **Send to**:
 ### Plugin settings (Discord → Vencord → Plugins → YAYDSS ⚙)
 | Setting | Meaning |
 |---|---|
-| **Follow** | On/off. Also on the ↻ button in the chat bar (the icons by the message box). |
+| **Follow** | On/off: whether YAYDSS moves the chat at all. Also in the chat-bar button's right-click menu. |
 | **Position** | **Bottom** (default): the newest message you see is from the VOD's moment, so no spoilers. **Middle**: Discord's normal jump, which also shows about a minute of later chat. |
 | **Smooth** | Scroll smoothly instead of jumping. |
 | **Flash** | Briefly highlight the message it moved to. |
 | **Port / Token** | Must match the extension (the token is the pairing token). Clear the token to make a new one (then paste it into the extension again). |
+
+**Chat-bar button** (by the message box):
+- ↻ = no clock yet (dim = Follow is off)
+- ▶ = paused: click to play
+- ⏸ = playing: click to pause
+- Right-click it for **Back / Forward 5 s and 30 s**, **Follow**, and **Stop clock**.
+- Hover over it to see the chat time.
 
 Automatic updates only move Discord while you're **in the synced channel**; switch to another channel and it leaves you alone. **Sync now** always brings you back.
 

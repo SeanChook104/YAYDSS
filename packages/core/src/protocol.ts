@@ -18,9 +18,11 @@ export interface Tick {
     messageId: string;
     realMs: number;
     reason: JumpReason;
+    /** Is the video playing? The plugin runs its own clock between ticks while true. Missing = true (older extensions). */
+    playing?: boolean;
 }
 
-const REASONS: readonly string[] = ["manual", "seek", "play", "interval"];
+const REASONS: readonly string[] = ["manual", "seek", "play", "pause", "interval"];
 
 export function isTick(x: unknown): x is Tick {
     if (typeof x !== "object" || x === null) return false;
@@ -38,6 +40,7 @@ export function isTick(x: unknown): x is Tick {
         isSnowflake(t.messageId) &&
         Number.isFinite(t.realMs) &&
         typeof t.reason === "string" &&
-        REASONS.includes(t.reason)
+        REASONS.includes(t.reason) &&
+        (t.playing === undefined || typeof t.playing === "boolean")
     );
 }
